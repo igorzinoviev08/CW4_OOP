@@ -1,57 +1,66 @@
-
 import os
-
 import requests
 
-
-from api.parser import ParserAPI
+from api.mixins.formatted_vacancies import FormattedVacanciesMixin
 from models.vacancy import Vacancy
 from utils.currency_converter import get_currency_data
+from api.parser import BaseVacancyAPI
+from typing import List, Dict
 
 
-class SuperJobVacancyAPI(ParserAPI):
+class SuperJobVacancyAPI(BaseVacancyAPI, FormattedVacanciesMixin):
     """
-    Класс, наследующийся от абстрактного класса,
-    для работы с платформой superjob
+    Класс для работы с платформой SuperJob.
     """
+
     url = "https://api.superjob.ru/2.0/vacancies/"
 
-    def __init__(self, keyword):
-        self.keyword = keyword
-        self.params = {
-            "count": 100,
-            "page": 1,
-            "keywords": [[1, keyword]],
-            "archived": False
-        }
+    def __init__(self, keyword: str):
+        """
+        Инициализация класса.
+
+        :param keyword: Ключевое слово для поиска вакансий.
+        """
+        super().__init__(keyword)
         self.headers = {
-            "X-Api-App-Id": 'v3.r.126346210.19bcc737f1e3c2cc25555883f327544a579296fa.9cf8e122bc29d60287e5d00116238334efa8d24c'
+            "X-Api-App-Id": os.getenv('API_SUPERJOB_KEY')
         }
-        self.vacancies = self.get_request()
 
-    def get_request(self):
+    def _get_request(self, page: int) -> List[Dict]:
         """
-        Метод для подключения к апи
-        :return: список словарей json
-        """
-        response = requests.get(self.url, headers=self.headers, params=self.params)
+        Получение данных о вакансиях через API SuperJob.
 
-        return response.json()["objects"]
-
-    def get_formatted_vacancies(self):
+        :param page: Номер страницы запроса.
+        :return: Список словарей JSON с данными о вакансиях.
         """
-        Метод для форматирования списка словарей с вакансиями
-        :return: приведенный к нужному виду список словарей
-        """
-        formatted_vacancies = []
+        params = {
+            "count": 100,
+            "page": page,
+            "keywords": [[1, self.keyword]],
+            'archived': False
+        }
+        try:
+            response = requests.get(self.url, headers=self.headers, params=params)
+            response.raise_for_status()
+            return response.json().get("objects", [])
+        except requests.exceptions.RequestException as e:
+            print("An error occurred while making the request:", e)
+            return []
 
-        for vacancy in self.vacancies:
-            if self.keyword.lower() in vacancy["profession"].lower():
-                url = vacancy["link"]
-                title = vacancy["profession"]
-                employer = vacancy['firm_name']
-                salary_from = vacancy['payment_from']
-                if vacancy["currency"].upper() not in ["RUR", "RUB"] and vacancy['payment_from']:
-                    salary_from *= get_currency_data(vacancy["currency"])
-                formatted_vacancies.append(Vacancy(title, url, salary_from, employer))
-            return formatted_vacancies
+    def _format_vacancy(self, vacancy_data: Dict) -> Vacancy:
+        """
+        Форматирование данных о вакансии для платформы SuperJob.
+
+        :param vacancy_data: Словарь с данными о вакансии.
+        :return: Объект Vacancy.
+        """
+        if self.keyword.lower() in vacancy_data["profession"].lower():
+            url = vacancy_data["link"]
+            title = vacancy_data["profession"]
+            employer = vacancy_data["firm_name"]
+            salary_from = vacancy_data["payment_from"]
+
+            if vacancy_data["currency"].upper() not in ["RUR", "RUB"] and vacancy_data["payment_from"]:
+                salary_from *= get_currency_data(vacancy_data["currency"])
+
+            return Vacancy(title, url, salary_from, employer)
