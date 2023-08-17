@@ -1,20 +1,11 @@
-<style>
-  .flex-container {
-    display: flex;
-    align-items: center;
-  }
-  
-  .project-description {
-    flex: 1;
-  }
-  
-  .project-image {
-    flex: 1;
-    text-align: right;
-  }
-</style>
 
-# CW4_OOP - Проект по работе с API и топ вакансиями
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+<body>
+  <h1>CW4_OOP - Проект по работе с API и топ вакансиями</h1>
 
 <div class="flex-container">
   <div class="project-description">
@@ -87,4 +78,5 @@
 * `__write_file(cls)`: Метод для записи полученных вакансий в файл.
 * `__sub_user_interaction(cls)`: Подинтерактив для пользователя.
 * `_user_interaction(cls)`: Интерактив для пользователя.
-
+</body>
+</html>
